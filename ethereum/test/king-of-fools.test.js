@@ -142,7 +142,6 @@ describe('King of fools', function () {
     it('should make player2 king if he deposits more USDC than the ETH player1 deposited, and player1 receives the deposit', async function () {
         const usdcBalanceOfPlayer1 = await usdcContract.balanceOf(player1.address);
 
-        await mockChainlinkPriceFeed.mock.latestRoundData.returns('0', USDC_TO_WEI, '0', '0', '0');
         await kingOfFools.connect(player1).playWithEther({value: ethers.utils.parseEther('1')});
 
         const amountUsdc = ethers.utils.parseEther('1.6').mul(parseUSDC(1)).div(USDC_TO_WEI);
@@ -158,8 +157,6 @@ describe('King of fools', function () {
 
     it('should make player2 king if he deposits more ETH than the USDC player1 deposited, and player1 receives the deposit', async function () {
         const ethBalanceOfPlayer1 = await ethers.provider.getBalance(player1.address);
-
-        await mockChainlinkPriceFeed.mock.latestRoundData.returns('0', USDC_TO_WEI, '0', '0', '0');
 
         const player1Deposit = parseUSDC(15);
         await usdcContract.connect(player1).approve(kingOfFools.address, player1Deposit);
@@ -202,12 +199,25 @@ describe('King of fools', function () {
         await kingOfFools.connect(player1).playWithEther({value: player1ETH});
 
         const amountUsdc = player1ETH.mul(3).div(2).mul(parseUSDC(1)).div(USDC_TO_WEI).add(1);
-        console.log('input', amountUsdc.mul(USDC_TO_WEI).mul(2));
-        console.log('existing', (await kingOfFools.connect(player2).currentKingStakeEther()).mul(3));
 
         await usdcContract.connect(player2).approve(kingOfFools.address, amountUsdc);
         await kingOfFools.connect(player2).playWithUSDC(amountUsdc);
 
         expect(await kingOfFools.currentKingOfFools()).to.equal(player2.address);
+    });
+
+    it('should revert if players try to play when they are already the king of fools', async function () {
+        await kingOfFools.connect(player1).playWithEther({value: ethers.utils.parseEther('1')});
+
+        await expect(
+            kingOfFools.connect(player1).playWithEther({value: ethers.utils.parseEther('1.6')})
+        ).to.be.reverted;
+
+        const amountUsdc = ethers.utils.parseEther('1.6').mul(parseUSDC(1)).div(USDC_TO_WEI);
+        await usdcContract.connect(player1).approve(kingOfFools.address, amountUsdc);
+
+        await expect(
+            kingOfFools.connect(player1).playWithUSDC(amountUsdc)
+        ).to.be.reverted;
     });
 });

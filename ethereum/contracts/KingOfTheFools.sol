@@ -1,13 +1,13 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./chainlink/AggregatorV3Interface.sol";
 
-contract KingOfTheFools is Ownable, ReentrancyGuard {
+contract KingOfTheFools is ReentrancyGuard {
     using Address for address payable;
 
     uint public constant STAKE_DENOMINATOR = 2;
@@ -21,12 +21,17 @@ contract KingOfTheFools is Ownable, ReentrancyGuard {
 
     event NewKingOfFools(address newKingOfFools);
 
-    constructor(address _usdc, address _usdc_eth_priceFeed) {
-        usdc = IERC20(_usdc);
-        usdc_eth_priceFeed = AggregatorV3Interface(_usdc_eth_priceFeed);
+    modifier notCurrentKing() {
+        require(msg.sender != currentKingOfFools, "You are already the king of fools.");
+        _;
     }
 
-    function playWithEther() external payable nonReentrant {
+    constructor(IERC20 _usdc, AggregatorV3Interface _usdc_eth_priceFeed) {
+        usdc = _usdc;
+        usdc_eth_priceFeed = _usdc_eth_priceFeed;
+    }
+
+    function playWithEther() external payable notCurrentKing nonReentrant {
         if (msg.value == 0) {
             revert("You must deposit some amount of money.");
         }
@@ -43,11 +48,11 @@ contract KingOfTheFools is Ownable, ReentrancyGuard {
             revert("You must deposit 1.5x more money than the previous king.");
         }
 
-        address payable oldKing = crownNewKing(msg.value * EXCHANGE_MULTIPLIER);
+        address payable oldKing = _crownNewKing(msg.value * EXCHANGE_MULTIPLIER);
         oldKing.sendValue(msg.value);
     }
 
-    function playWithUSDC(uint usdcToDeposit) external nonReentrant {
+    function playWithUSDC(uint usdcToDeposit) external notCurrentKing nonReentrant {
         if (usdcToDeposit == 0) {
             revert("You must deposit some amount of money.");
         }
@@ -56,7 +61,7 @@ contract KingOfTheFools is Ownable, ReentrancyGuard {
             revert("You must first approve this contract to spend your USDC.");
         }
 
-        uint ethToDeposit = usdcToDeposit * getLatestPrice();
+        uint ethToDeposit = usdcToDeposit * _getLatestPrice();
 
         if (currentKingOfFools == address(0)) {
             currentKingStakeEther = ethToDeposit;
@@ -71,11 +76,11 @@ contract KingOfTheFools is Ownable, ReentrancyGuard {
             revert("You must deposit 1.5x more money than the previous king.");
         }
 
-        address oldKing = crownNewKing(ethToDeposit);
+        address oldKing = _crownNewKing(ethToDeposit);
         usdc.transferFrom(msg.sender, oldKing, usdcToDeposit);
     }
 
-    function getLatestPrice() internal returns (uint) {
+    function _getLatestPrice() internal returns (uint) {
         (uint80 roundID,
         int price,
         uint startedAt,
@@ -86,7 +91,7 @@ contract KingOfTheFools is Ownable, ReentrancyGuard {
         return uint(price);
     }
 
-    function crownNewKing(uint newKingStakeEther) internal returns (address payable) {
+    function _crownNewKing(uint newKingStakeEther) internal returns (address payable) {
         currentKingStakeEther = newKingStakeEther;
 
         address payable oldKing = currentKingOfFools;

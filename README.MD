@@ -1,4 +1,4 @@
-# Solid World DAO challenge - King of the fools
+# King of the fools
 
 ## Problem description
 
@@ -8,8 +8,8 @@
 Example:
 1. Smart contract is empty
 2. First person deposits 1 ETH there, nobody gets anything
-3. Second person deposits 1.5 ETH there, the first person receives 1.5 ETH
-4. Third person deposits 1951 USDC (suppose 1.5 ether == 1950 USDC), the second person receives 1951 USDC
+3. Second person deposits 1.51 ETH there, the first person receives 1.51 ETH
+4. Third person deposits 2290 USDC (suppose 1 ether == 1000 USDC), the second person receives 2290 USDC
 5. ...
 
 To do: write the smart contract + a simple UI that interacts with the contract.
